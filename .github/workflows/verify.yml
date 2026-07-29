@@ -1,0 +1,56 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Reconstruct staged artifact
+        if: ${{ hashFiles('.import/CoreTheorem.v.b64.*') != '' }}
+        run: |
+          mkdir -p paper
+          cat .import/CoreTheorem.v.b64.* | base64 --decode > CoreTheorem.v
+          cat .import/main.tex.b64.* | base64 --decode > paper/main.tex
+          test -s CoreTheorem.v
+          test -s paper/main.tex
+
+      - name: Verify formal development with Rocq 9.2
+        run: |
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -w /work \
+            rocq/rocq-prover:9.2 \
+            rocq compile -q CoreTheorem.v
+          ! grep -nE '^[[:space:]]*(Axiom|Parameter|Conjecture|Admitted)([[:space:]]|\.)' CoreTheorem.v
+
+      - name: Install TeX dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            latexmk texlive-latex-base texlive-latex-extra \
+            texlive-fonts-recommended texlive-fonts-extra
+
+      - name: Build and inspect paper
+        run: |
+          make paper
+          test -s paper/main.pdf
+          pdfinfo paper/main.pdf | grep -q '^Pages:'
+
+      - name: Replace staging chunks with canonical files
+        if: ${{ github.event_name == 'push' && hashFiles('.import/CoreTheorem.v.b64.*') != '' }}
+        run: |
+          rm -rf .import
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A CoreTheorem.v paper/main.tex paper/main.pdf .import
+          git commit -m "Import formal artifact and compiled paper [skip ci]"
+          git push
