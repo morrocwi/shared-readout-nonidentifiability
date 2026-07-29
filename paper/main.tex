@@ -1,0 +1,231 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathpazo}
+\usepackage[scaled=0.88]{helvet}
+\usepackage{courier}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage[margin=0.85in,columnsep=0.28in]{geometry}
+
+\hypersetup{
+  pdftitle={Both States Exist, Neither Can Be Recovered},
+  pdfauthor={Yaoharee Lahtee},
+  pdfsubject={Foundations of measurement; formal verification},
+  pdfkeywords={readout, decoder, undecodability, monoid, automorphism, Coq}
+}
+
+\titleformat{\section}{\normalfont\bfseries\large}{\thesection.}{0.55em}{}
+\titleformat{\subsection}{\normalfont\itshape}{\thesubsection.}{0.55em}{}
+\titlespacing*{\section}{0pt}{1.6ex plus .3ex}{0.8ex}
+\titlespacing*{\subsection}{0pt}{1.1ex plus .3ex}{0.5ex}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\itshape Both States Exist, Neither Can Be Recovered}
+\fancyhead[R]{\footnotesize\itshape (preprint version)\quad\upshape\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyhead[R]{\footnotesize\itshape (preprint version)}\renewcommand{\headrulewidth}{0pt}}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{escape}{Escape}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem*{status}{Status}
+\newtheorem*{reading}{Reading}
+
+\setlength{\parindent}{1.2em}
+\setlength{\emergencystretch}{2.5em}
+
+\title{\vspace{-2.2em}\textbf{\large Both States Exist, Neither Can Be Recovered}\\[0.25em]
+\normalfont\normalsize A hardened core theorem, and five closed escapes\vspace{-0.4em}}
+
+\author{
+  \normalsize Yaoharee Lahtee\\[0.15em]
+  \footnotesize Open Civil Science Initiative, Pattani, Thailand\\
+  \footnotesize ORCID: \href{https://orcid.org/0009-0005-3861-0626}{0009-0005-3861-0626}
+}
+\date{}
+
+\begin{document}
+\twocolumn[
+\begin{@twocolumnfalse}
+\maketitle
+\begin{abstract}
+\noindent
+\small
+When a readout collapses two distinct states into a single recorded value, both states still exist, but no decoder can recover both of them from that record. We state this claim at the weakest hypotheses under which it is true --- two states in an arbitrary type, a readout to an arbitrary type, nothing else --- and prove it there. The more substantial content of this note is what surrounds the claim rather than the claim itself: five ways of trying to defeat, dilute, or step around it, each formalised at its strongest form and each shown, by proof rather than by argument, to fail or to answer a different question. A single operation cannot be simultaneously neutral and absorbing for the same carrier, so no bookkeeping trick recovers both roles from one mechanism; splitting the roles across two operations succeeds, but proves a fact about status propagation, not about recovering a value. Moving the reader inside the structure being read yields a genuine and separate fact --- a reader cannot read the event of its own reading --- and leaves the core claim unchanged for anything else. Giving the decoder access to a full history helps exactly when, and only when, the histories of the two states eventually diverge; if they never do, a history-reading decoder is bound by the same collapse as a one-shot one. Denying that the two states were ever distinct does not refute the theorem; it exits the theorem's domain, exactly where the domain says it should. All results are machine-checked in Coq without axioms, and a companion Coq file accompanies this note in full, compiling as given.
+\end{abstract}
+\vspace{1.2em}
+\end{@twocolumnfalse}
+]
+\thispagestyle{plain}
+
+%% ================================================================
+\section{The claim, and why it needs fortifying rather than restating}
+
+A record that identifies two distinct states is called lossy, and it is standard to say that the states behind it exist but are unreadable. The claim is easy to state and, once stated at the right strength, easy to prove: it is the fact that a non-injective map has no left inverse, applied to a decoder attempting to recover a state from a shared readout value. What is not easy, and what this note is actually about, is holding the claim fixed while every plausible way of arguing around it is tried against it.
+
+Over the course of developing a foundation whose primitive is a retained distinction, five such attempts were made, in five different directions, by someone genuinely searching for a way past the result rather than conceding it. Each attempt was formalised, at its strongest and most charitable reading, and each was checked by machine rather than argued in prose. Four of the five turned out to be true and important --- and to be answering questions the core theorem does not ask. The fifth turned out to be algebraically impossible outright. None of the five defeats the claim; naming precisely what each one does instead is the content of this note.
+
+Section~\ref{sec:setting} fixes the minimal setting. Section~\ref{sec:core} states and proves the core theorem. Section~\ref{sec:escapes} gives the five escapes, each with its strongest formalisation, its proof or refutation, and a reading of what it actually establishes. Section~\ref{sec:claimed} separates what is claimed from what is standard. Section~\ref{sec:verification} describes the companion development.
+
+%% ================================================================
+\section{Setting}\label{sec:setting}
+
+\begin{definition}[Readout, decoder, correctness]
+A \emph{readout} is a map $O : X \to R$ between arbitrary types. A \emph{decoder} is a map $D : R \to X$. $D$ is \emph{correct at} $x$ when $D(O(x)) = x$.
+\end{definition}
+
+Nothing else is assumed: no finiteness, no decidable equality, no algebraic structure on $X$ or $R$. This matters, because several of the escapes below try to supply exactly such structure, and the core theorem's independence from it is what makes those attempts unable to touch it directly.
+
+%% ================================================================
+\section{The core theorem}\label{sec:core}
+
+\begin{theorem}[Existence is unconditional]\label{thm:exist}
+For any $x_1, x_2 : X$, both $x_1$ and $x_2$ exist as ordinary values of $X$.
+\end{theorem}
+
+This is not really a theorem so much as the form of the hypothesis: $x_1, x_2$ are handed in as values of $X$ before anything about a readout is invoked. It is stated anyway, because it is exactly the half of the informal claim that is not in question, and separating it from the half that is turns out to matter.
+
+\begin{theorem}[No decoder recovers both]\label{thm:core}
+Let $x_1 \neq x_2$ with $O(x_1) = O(x_2)$. Then for every decoder $D$, it is not the case that $D$ is correct at both $x_1$ and $x_2$.
+\end{theorem}
+
+\begin{proof}
+Suppose $D$ is correct at both. Then $x_1 = D(O(x_1)) = D(O(x_2)) = x_2$, contradicting $x_1 \neq x_2$.
+\end{proof}
+
+\begin{theorem}[The core theorem, as one statement]\label{thm:combined}
+Let $x_1 \neq x_2$ with $O(x_1) = O(x_2)$. Then $x_1$ exists, $x_2$ exists, and no decoder is correct at both.
+\end{theorem}
+
+Theorem~\ref{thm:combined} states existence and non-recoverability side by side deliberately, because the informal claim is often read as if it asserted one fact about two objects, when it asserts two different verdicts about two different existential quantifiers --- one over states, one over decoders. Making the shape visible is what closes the door on the fifth escape below.
+
+%% ================================================================
+\section{Five escapes, each closed}\label{sec:escapes}
+
+Each escape is given in the strongest form that would, if it worked, actually defeat Theorem~\ref{thm:combined}.
+
+\subsection{Double duty on one operation}
+
+\begin{escape}[One mechanism, two roles]
+Let a single element $e$ of a carrier $M$, under a single operation $\mathrm{op}$, be both neutral ($\mathrm{op}(e,x)=\mathrm{op}(x,e)=x$ for all $x$) and absorbing ($\mathrm{op}(e,x)=\mathrm{op}(x,e)=e$ for all $x$) at once --- letting one piece of bookkeeping both start clean and signal failure.
+\end{escape}
+
+\begin{theorem}\label{thm:escape1}
+If $e$ is both neutral and absorbing for $\mathrm{op}$, then $M$ has at most one element.
+\end{theorem}
+
+\begin{proof}
+For any $x$: neutrality gives $x = \mathrm{op}(e,x)$; absorption gives $\mathrm{op}(e,x) = e$; so $x = e$. This holds for every $x$, so all elements equal $e$.
+\end{proof}
+
+\begin{reading}
+This is not a limitation specific to readouts; it is an algebraic impossibility with nothing to do with them. Worse for the escape, its success would erase the very distinctness ($x_1 \neq x_2$) Theorem~\ref{thm:combined}'s hypothesis requires. An escape that collapses its own precondition has not defeated the theorem --- it has made the theorem vacuously inapplicable, which is a different and much smaller achievement than defeating it.
+\end{reading}
+
+\subsection{Double duty split across two operations}
+
+\begin{escape}[Two mechanisms, two roles]
+Accept that one operation cannot serve both roles, and use two: one operation accumulates within a single reading, a second composes across stages of a pipeline, with an unresolved marker neutral for the first and absorbing for the second.
+\end{escape}
+
+\begin{theorem}\label{thm:escape2}
+Such a pair of operations exists: on $\mathrm{Rec} := \mathrm{Unres} \mid \mathrm{Res}(q{:}\mathbb{Q})$, with $\mathrm{acc}$ folding $\mathrm{Res}$ values additively and passing through $\mathrm{Unres}$, and $\mathrm{seq}$ absorbing into $\mathrm{Unres}$ from either side, $\mathrm{Unres}$ is neutral for $\mathrm{acc}$ and absorbing for $\mathrm{seq}$, and $\mathrm{Rec}$ has at least two elements.
+\end{theorem}
+
+This one succeeds, exactly as stated, and is proved constructively in the companion development, including that $\mathrm{acc}$ is genuinely associative --- a Leibniz equality on the rational payload, not merely true up to a weaker equivalence.
+
+\begin{reading}
+Succeeding is not the same as mattering here. The escape is a fact about how a resolved-or-not \emph{status} propagates through a pipeline; it never claims to recover a value from a shared record, and supplies no pair $x_1 \neq x_2$ with $O(x_1) = O(x_2)$ for Theorem~\ref{thm:combined} to say anything about. It answers a real and different question honestly, rather than answering this one.
+\end{reading}
+
+\subsection{Moving the reader inside the structure}
+
+\begin{escape}[An internal observer]
+Give the reader a position inside the very structure it reads, rather than a vantage point outside it: a strict partial order (a causal past), with the reader positioned as an event, reading only the events causally prior to itself.
+\end{escape}
+
+\begin{theorem}\label{thm:escape3a}
+For irreflexive $\prec$, no event $e$ lies in its own causal past: $e \not\prec e$.
+\end{theorem}
+
+This is a genuine, separate gain --- call it self-opacity --- and it is proved directly from irreflexivity.
+
+\begin{theorem}\label{thm:escape3b}
+For any type $R'$, any readout $O' : E \to R'$ of events other than the reader itself, and any $x_1 \neq x_2$ in $E$ with $O'(x_1) = O'(x_2)$: no decoder is correct at both, exactly as in Theorem~\ref{thm:core}.
+\end{theorem}
+
+\begin{reading}
+An internal position changes what the reader cannot see --- itself --- and this is exactly Theorem~\ref{thm:escape3a}. It does not change what a reading of two other, collapsed states can recover: that reading is still an ordinary map of the shape Theorem~\ref{thm:combined} quantifies over, and the theorem applies to it unchanged, which Theorem~\ref{thm:escape3b} makes explicit rather than leaving to be assumed. Self-opacity and shared-record undecodability are two different, both-true facts; internalising the observer buys the first and leaves the second exactly where it was.
+\end{reading}
+
+\subsection{Giving the decoder memory}
+
+\begin{escape}[A decoder with history]
+Upgrade the decoder from one that sees a single record to one that sees a full history: $D_h : (\mathbb{N} \to R) \to X$, taking the entire trace of past readouts rather than the present one alone.
+\end{escape}
+
+\begin{theorem}\label{thm:escape4}
+Let $O_h : \mathbb{N} \to X \to R$ give the readout at each time. Suppose $x_1 \neq x_2$ produce identical readouts at every time, $O_h(n,x_1) = O_h(n,x_2)$ for all $n$, and suppose $D_h$ depends only on the pointwise values of the history it is given (the minimal condition any decoder implemented as a function of data must satisfy). Then $D_h$ is not correct at both $x_1$ and $x_2$.
+\end{theorem}
+
+\begin{proof}
+From pointwise agreement of the two histories and $D_h$'s dependence only on pointwise values, $D_h$ applied to either history yields the same output; if that output is $x_1$ and also $x_2$, then $x_1 = x_2$, a contradiction.
+\end{proof}
+
+\begin{reading}
+This is the honest strongest form of the memory escape, and its honest limit. The dependence-on-pointwise-values hypothesis is not smuggled in to make the proof easier; it is what ``the decoder reads the history'' means for an actual function of data, as opposed to a function permitted to depend on which text happens to represent the same history. Under that reading, a history that never diverges gives no new information: a history-reading decoder is bound by the same collapse as a one-shot one whenever the collapse persists at every time. What memory genuinely achieves is different and is not a counterexample: if the two histories diverge at some time $n_0$, then $O_h(n_0, \cdot)$ is a readout under which $x_1$ and $x_2$ no longer share a value, and recovery becomes possible from that time on --- which is Theorem~\ref{thm:combined}'s own hypothesis failing to hold for the richer readout, not a refutation of the theorem for the one that still does.
+\end{reading}
+
+\subsection{Denying the states were ever distinct}
+
+\begin{escape}[No pair to begin with]
+Claim the two labels never named two states at all --- that $x_1$ and $x_2$ are the same underlying object under different names, so there was nothing to recover because there was never a pair.
+\end{escape}
+
+\begin{theorem}\label{thm:escape5}
+If $x_1 = x_2$, there exists a decoder correct at both --- namely the constant decoder returning $x_1$.
+\end{theorem}
+
+\begin{reading}
+This is not a refutation; it is the precise converse boundary of Theorem~\ref{thm:combined}, and it confirms rather than undermines the hypothesis $x_1 \neq x_2$. Recovery is possible exactly when the states are not actually distinct, which is what one should want a correctly-scoped theorem to say. Denying the hypothesis does not step inside the theorem's domain and defeat it; it steps outside the domain, at exactly the boundary the domain itself specifies.
+\end{reading}
+
+%% ================================================================
+\section{What is claimed}\label{sec:claimed}
+
+The core theorem is elementary --- a non-injective map has no left inverse --- and no novelty is claimed for it. What is offered is the fortification: five attempts to escape the claim, each taken in its strongest and most charitable form rather than a weak version chosen to be easy to refute, and each checked by machine rather than settled by argument. Two of the five (Escapes~2 and~3) succeed at what they set out to do and are recorded as succeeding, because misrepresenting a real result as a failure would be dishonest in the other direction. What they do not do is touch Theorem~\ref{thm:combined}, and saying precisely what question each of them does answer is the substance of Section~\ref{sec:escapes}.
+
+Nothing here is claimed about any particular physical or computational system actually exhibiting a lossy readout; that antecedent must be established case by case, as in the companion developments this note closes out. And nothing here is claimed at the strength of ``no escape of any kind exists'': five were tried, in five directions that arose from genuine attempts across an extended line of work, and five are closed. A sixth is not foreclosed by anything in this note; none is attempted here.
+
+%% ================================================================
+\section{Verification}\label{sec:verification}
+
+All theorems, including every escape, are machine-checked in Coq~8.18 without axioms. \texttt{Print Assumptions} reports \emph{Closed under the global context} for each. The core theorem (Section~\ref{sec:core}) is fully polymorphic in $X$ and $R$; nothing is assumed about either type anywhere. Escape~4's decoder-extensionality hypothesis is stated and used explicitly rather than obtained from a functional-extensionality axiom, which this development --- and the line of work it closes --- avoids throughout.
+
+\begin{status}
+Escape~4 is conditional on the decoder depending only on pointwise history values; a decoder permitted to depend on some other feature of its input's presentation is not covered, and no claim is made about one. Escape~3's internal-observer setting assumes only irreflexivity of the causal order; no further structure (transitivity, local finiteness) is used or needed for the two theorems given here.
+\end{status}
+
+\section*{Acknowledgements}
+\small
+The author thanks Walancha Supantarika. This work was conducted under the Open Civil Science Initiative and follows open science principles throughout. Preparation was AI-assisted; the stance, the selection of results, and any errors are the author's.
+
+\vspace{0.6em}
+\noindent
+\textbf{Artefacts.} The Coq development \texttt{CoreTheorem.v} accompanies this paper and compiles as given: \texttt{coqc -q CoreTheorem.v}. It requires only the Coq standard library (\texttt{QArith}).
+
+\end{document}

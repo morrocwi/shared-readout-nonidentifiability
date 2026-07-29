@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this artifact, please cite it as below."
+title: "Both States Exist, Neither Can Be Recovered: A Hardened Core Theorem and Five Closed Escapes"
+type: software
+authors:
+  - family-names: Lahtee
+    given-names: Yaoharee
+    orcid: "https://orcid.org/0009-0005-3861-0626"
+year: 2026
+repository-code: "https://github.com/morrocwi/shared-readout-nonidentifiability"
+license: MIT
+keywords:
+  - non-identifiability
+  - readout
+  - decoder
+  - formal verification
+  - Coq
+  - Rocq
