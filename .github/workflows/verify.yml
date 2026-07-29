@@ -36,8 +36,8 @@ jobs:
       - name: Verify formal development with Rocq 9.2
         if: ${{ steps.detect.outputs.present == 'true' }}
         run: |
+          chmod -R a+rwX "$GITHUB_WORKSPACE"
           docker run --rm \
-            --user root \
             -v "$GITHUB_WORKSPACE:/work" \
             -w /work \
             rocq/rocq-prover:9.2 \
