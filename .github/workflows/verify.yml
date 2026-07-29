@@ -37,6 +37,7 @@ jobs:
         if: ${{ steps.detect.outputs.present == 'true' }}
         run: |
           docker run --rm \
+            --user root \
             -v "$GITHUB_WORKSPACE:/work" \
             -w /work \
             rocq/rocq-prover:9.2 \
